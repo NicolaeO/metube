@@ -10,16 +10,18 @@ import socketio
 import logging
 import json
 import pathlib
+import dotenv
 
 from ytdl import DownloadQueueNotifier, DownloadQueue
 from yt_dlp.version import __version__ as yt_dlp_version
+from telegram_client import TelegramDownloader
 
 log = logging.getLogger('main')
 
 class Config:
     _DEFAULTS = {
-        'DOWNLOAD_DIR': '.',
-        'AUDIO_DOWNLOAD_DIR': '%%DOWNLOAD_DIR',
+        'DOWNLOAD_DIR': '.',                    # Video default dir
+        'AUDIO_DOWNLOAD_DIR': '%%DOWNLOAD_DIR', # Audio default dir
         'TEMP_DIR': '%%DOWNLOAD_DIR',
         'DOWNLOAD_DIRS_INDEXABLE': 'false',
         'CUSTOM_DIRS': 'true',
@@ -51,6 +53,13 @@ class Config:
     _BOOLEAN = ('DOWNLOAD_DIRS_INDEXABLE', 'CUSTOM_DIRS', 'CREATE_CUSTOM_DIRS', 'DELETE_FILE_ON_TRASHCAN', 'DEFAULT_OPTION_PLAYLIST_STRICT_MODE', 'HTTPS')
 
     def __init__(self):
+
+        try:
+            prj_dir = pathlib.Path(__name__).parent.parent
+            dotenv.load_dotenv(prj_dir.joinpath('.env'), override=True)
+        except Exception as e:
+            log.error('Unable to load ".env" some functionalities may be limited. Please check your environment variables')
+
         for k, v in self._DEFAULTS.items():
             setattr(self, k, os.environ.get(k, v))
 
@@ -156,6 +165,7 @@ async def add(request):
 
     status = await dqueue.add(url, quality, format, folder, custom_name_prefix, playlist_strict_mode, playlist_item_limit, auto_start)
     return web.Response(text=serializer.encode(status))
+
 
 @routes.post(config.URL_PREFIX + 'delete')
 async def delete(request):
@@ -302,4 +312,11 @@ if __name__ == '__main__':
         ssl_context.load_cert_chain(certfile=config.CERTFILE, keyfile=config.KEYFILE)
         web.run_app(app, host=config.HOST, port=int(config.PORT), reuse_port=supports_reuse_port(), ssl_context=ssl_context)
     else:
+        from threading import Thread
+        td = TelegramDownloader(dqueue=dqueue, response=web.Response, serializer=serializer)
+        thread = Thread(target=td.start_app, args=(None, ))
+        thread.start()
+        # thread.join()
         web.run_app(app, host=config.HOST, port=int(config.PORT), reuse_port=supports_reuse_port())
+
+

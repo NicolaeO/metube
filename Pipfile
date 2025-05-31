@@ -10,6 +10,8 @@ pylint = "*"
 aiohttp = "*"
 python-socketio = "~=5.0"
 yt-dlp = "*"
+python-telegram-bot = "*"
+python-dotenv = "*"
 
 [requires]
 python_version = "3.11"
