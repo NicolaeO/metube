@@ -306,20 +306,20 @@ def supports_reuse_port():
     except (AttributeError, OSError):
         return False
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    log.info(f"Listening on {config.HOST}:{config.PORT}")
 
+if __name__ == '__main__':
+    if config.TELEGRAM_BOT_ENABLED:
+        telegram_downloader = TelegramDownloader(dqueue=dqueue, response=web.Response, serializer=serializer)
+        log.info("Running Telegram bot")
+
+        tg_thread = Thread(target=telegram_downloader.botloop, name="botloop")
+        tg_thread.daemon = True
+        tg_thread.start()
+
+    # Setup aiohttp server
     if config.HTTPS:
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(certfile=config.CERTFILE, keyfile=config.KEYFILE)
         web.run_app(app, host=config.HOST, port=int(config.PORT), reuse_port=supports_reuse_port(), ssl_context=ssl_context)
     else:
-        if config.TELEGRAM_BOT_ENABLED:
-            td = TelegramDownloader(dqueue=dqueue, response=web.Response, serializer=serializer)
-            thread = Thread(target=td.start_app, args=(None, ))
-            thread.start()
-            # thread.join()
         web.run_app(app, host=config.HOST, port=int(config.PORT), reuse_port=supports_reuse_port())
-
-

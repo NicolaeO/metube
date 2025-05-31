@@ -258,6 +258,8 @@ Make sure you have node.js and Python 3.11 installed.
 cd metube/ui
 # install Angular and build the UI
 npm install
+# for linux if getting pemission error
+chmod +x node_modules/.bin/ng
 node_modules/.bin/ng build
 # install python dependencies
 cd ..

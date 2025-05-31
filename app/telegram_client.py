@@ -1,5 +1,7 @@
 import os
 import logging
+import asyncio
+import time
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
@@ -27,37 +29,63 @@ class TelegramDownloader:
 
     def __init__(self, dqueue, response, serializer):
         # Create the application
-        _telegram_api_token = os.getenv("TELEGRAM_API_BOT_TOKEN")
-        if not _telegram_api_token:
+        self._telegram_api_token = os.getenv("TELEGRAM_API_BOT_TOKEN")
+        if not self._telegram_api_token:
             logger.error('"TELEGRAM_API_BOT_TOKEN" not provided, exiting...')
             return None
-        self.app = ApplicationBuilder().token(_telegram_api_token).build()
-
-        # Set default and error commands
-        self.app.add_error_handler(self.error)
-        self.app.add_handler(CommandHandler("help", self.help))
-
-        # Set message commands
-        self.app.add_handler(MessageHandler(filters.Entity("url") | filters.Entity("text_link"), self.get_youtube_url))
-        # self.app.add_handler(MessageHandler(filters.TEXT & (filters.Text("MP3") | filters.Text("MP4")), self.download_youtube))
-        self.app.add_handler(MessageHandler(filters.Regex("MP3|MP4"), self.download_youtube))
-
-        self.app.add_handler(MessageHandler(filters.TEXT, self.help))
 
         self.response = response
         self.dqueue = dqueue
         self.serializer = serializer
 
 
-    def start_app(self):
-        """Start app listener
+    async def botloop_routine(self):
+        """Start bootloop
         """
-        logging.info("Starting telegram bot...")
-        try:
-            self.app.run_polling(allowed_updates=Update.ALL_TYPES)
-        except KeyboardInterrupt:
-            self.app.stop_running()
-        logging.info("Shutting down application...")
+        self.application = Application.builder().token(self._telegram_api_token).build()
+        
+        # Set default and error commands
+        self.application.add_error_handler(self.error)
+        self.application.add_handler(CommandHandler("help", self.help))
+
+        # Set message commands
+        self.application.add_handler(MessageHandler(filters.Entity("url") | filters.Entity("text_link"), self.get_youtube_url))
+        # self.application.add_handler(MessageHandler(filters.TEXT & (filters.Text("MP3") | filters.Text("MP4")), self.download_youtube))
+        self.application.add_handler(MessageHandler(filters.Regex("MP3|MP4"), self.download_youtube))
+
+        self.application.add_handler(MessageHandler(filters.TEXT, self.help))
+
+        await self.application.initialize()
+        await self.application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+        await self.application.start()
+        
+        # Telegram now runs in the background, as an asyncio coroutine.
+        # the other asyncio couroutine "task" is the following loop
+        while True:
+            # exiting from this loop will make the bot exit
+            await asyncio.sleep(1)
+        
+        # dropped from the loop -> shutdown bot
+        await self.application.Updater.stop()
+        await self.application.stop()
+        await self.application.shutdown()
+
+
+    async def botloop_starttask(self):
+        """Start the task
+        """
+        bot_routine = asyncio.create_task(self.botloop_routine())
+        await bot_routine
+
+
+    # start botloop. This blocks, so this must be started as a new thread.
+    def botloop(self, *args, **kwargs):
+        """Entry point
+        tg_thread = Thread(target=botloop, name="botloop")
+        tg_thread.daemon = True
+        tg_thread.start()
+        """
+        asyncio.run(self.botloop_starttask())
 
 
     async def error(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -121,13 +149,3 @@ class TelegramDownloader:
             logger.error("Unable to download the resource: %s", e)
             res = "video" if vformat == "MP4" else "song"
             await update.message.reply_text(f"Sorry, we were not able to download the {res}")
-
-        # status = await dqueue.add(url, quality, format, folder, custom_name_prefix, playlist_strict_mode, playlist_item_limit, auto_start)
-        # return web.Response(text=serializer.encode(status))
-
-
-if __name__ == "__main__":
-    from unittest.mock import MagicMock
-    td = TelegramDownloader(MagicMock(), MagicMock(), MagicMock())
-    td.start_app()
-
