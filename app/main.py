@@ -11,10 +11,12 @@ import logging
 import json
 import pathlib
 import dotenv
+from threading import Thread
 
 from ytdl import DownloadQueueNotifier, DownloadQueue
 from yt_dlp.version import __version__ as yt_dlp_version
 from telegram_client import TelegramDownloader
+
 
 log = logging.getLogger('main')
 
@@ -48,9 +50,10 @@ class Config:
         'DEFAULT_THEME': 'auto',
         'DOWNLOAD_MODE': 'limited',
         'MAX_CONCURRENT_DOWNLOADS': 3,
+        'TELEGRAM_BOT_ENABLED': os.getenv('TELEGRAM_BOT_ENABLED', "False").upper() == "TRUE",
     }
 
-    _BOOLEAN = ('DOWNLOAD_DIRS_INDEXABLE', 'CUSTOM_DIRS', 'CREATE_CUSTOM_DIRS', 'DELETE_FILE_ON_TRASHCAN', 'DEFAULT_OPTION_PLAYLIST_STRICT_MODE', 'HTTPS')
+    _BOOLEAN = ('DOWNLOAD_DIRS_INDEXABLE', 'CUSTOM_DIRS', 'CREATE_CUSTOM_DIRS', 'DELETE_FILE_ON_TRASHCAN', 'DEFAULT_OPTION_PLAYLIST_STRICT_MODE', 'HTTPS', 'TELEGRAM_BOT_ENABLED')
 
     def __init__(self):
 
@@ -312,11 +315,11 @@ if __name__ == '__main__':
         ssl_context.load_cert_chain(certfile=config.CERTFILE, keyfile=config.KEYFILE)
         web.run_app(app, host=config.HOST, port=int(config.PORT), reuse_port=supports_reuse_port(), ssl_context=ssl_context)
     else:
-        from threading import Thread
-        td = TelegramDownloader(dqueue=dqueue, response=web.Response, serializer=serializer)
-        thread = Thread(target=td.start_app, args=(None, ))
-        thread.start()
-        # thread.join()
+        if config.TELEGRAM_BOT_ENABLED:
+            td = TelegramDownloader(dqueue=dqueue, response=web.Response, serializer=serializer)
+            thread = Thread(target=td.start_app, args=(None, ))
+            thread.start()
+            # thread.join()
         web.run_app(app, host=config.HOST, port=int(config.PORT), reuse_port=supports_reuse_port())
 
 
