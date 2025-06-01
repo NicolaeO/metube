@@ -12,13 +12,11 @@ import pathlib
 from threading import Thread
 
 from yt_dlp.version import __version__ as yt_dlp_version
-from telegram_client import main
+from telegram_client import start_bot
 from config import config, serializer, dqueue, sio
 
 
-
 log = logging.getLogger('main')
-
 
 app = web.Application()
 sio.attach(app, socketio_path=config.URL_PREFIX + 'socket.io')
@@ -207,8 +205,7 @@ async def startup():
     print("****************")
     print("* starting bot *")
     print("****************")
-    await main()
-    # await dp.start_polling(bot)
+    await start_bot()
 
 
 if __name__ == '__main__':

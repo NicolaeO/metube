@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 class Config:
     _DEFAULTS = {
-        'DOWNLOAD_DIR': '.',                    # Video default dir
-        'AUDIO_DOWNLOAD_DIR': '%%DOWNLOAD_DIR', # Audio default dir
+        'DOWNLOAD_DIR': '.',                            # Video default dir
+        'AUDIO_DOWNLOAD_DIR': '%%AUDIO_DOWNLOAD_DIR',   # Audio specific dir - defined in docker
         'TEMP_DIR': '%%DOWNLOAD_DIR',
         'DOWNLOAD_DIRS_INDEXABLE': 'false',
         'CUSTOM_DIRS': 'true',

@@ -26,6 +26,8 @@ RUN sed -i 's/\r$//g' docker-entrypoint.sh && \
     mkdir /.cache && chmod 777 /.cache
 
 COPY app ./app
+# add the .env file that contains telegram key
+COPY .env ./
 COPY --from=builder /metube/dist/metube ./ui/dist/metube
 
 ENV UID=1000
@@ -33,6 +35,8 @@ ENV GID=1000
 ENV UMASK=022
 
 ENV DOWNLOAD_DIR /downloads
+# Extra param for audio only to be written to another folder
+ENV AUDIO_DOWNLOAD_DIR /audio_download
 ENV STATE_DIR /downloads/.metube
 ENV TEMP_DIR /downloads
 VOLUME /downloads

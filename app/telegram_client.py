@@ -50,12 +50,12 @@ URL_REGEX = re.compile(r'https?://\S+')
 @dp.message()
 async def handle_message(message: Message):
     global URL
-    print(message)
+    logger.info("Handling message: %s", message.message_id)
     if URL_REGEX.search(message.text or ''):
         await message.answer("Detected a URL!")
         
-        logger.debug("get_youtube_url handler reached")
         URL = message.text
+        logger.info("Received resource URL: %s", URL)
 
         # Define the keyboard
         keyboard = ReplyKeyboardMarkup(
@@ -74,9 +74,10 @@ async def handle_message(message: Message):
         )
 
     if message.text.upper() in ['MP4', 'MP3']:
-        logger.debug("download_youtube handler reached")
+        res = "video" if message.text.upper() == "MP4" else "audio"
+        logger.info("Downloading %s from YouTube", res)
         if not URL:
-            await message.answer("Unknown URL...")
+            await message.answer("Previously saved URL seem to be missing, please send a URL first")
             return
         url = URL
         quality = "0"
@@ -84,7 +85,7 @@ async def handle_message(message: Message):
         folder = None
         custom_name_prefix = ''
         auto_start = True
-        playlist_strict_mode = 'false'
+        playlist_strict_mode = '&list=' in url
         playlist_item_limit = 20
 
         logging.info(f"Downloading {url} as {message.text}")
@@ -100,9 +101,9 @@ async def handle_message(message: Message):
             await message.answer(f"Sorry, we were not able to download the {res}")
 
 # Run the bot
-async def main() -> None:
+async def start_bot() -> None:
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(start_bot())
