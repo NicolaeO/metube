@@ -54,7 +54,8 @@ async def handle_message(message: Message):
     if URL_REGEX.search(message.text or ''):
         await message.answer("Detected a URL!")
         
-        URL = message.text
+        # extract url from message
+        URL = URL_REGEX.search(message.text)[0]
         logger.info("Received resource URL: %s", URL)
 
         # Define the keyboard
@@ -85,7 +86,7 @@ async def handle_message(message: Message):
         folder = None
         custom_name_prefix = ''
         auto_start = True
-        playlist_strict_mode = '&list=' in url
+        playlist_strict_mode = 'true' if '&list=' in url else 'false'
         playlist_item_limit = 20
 
         logging.info(f"Downloading {url} as {message.text}")
